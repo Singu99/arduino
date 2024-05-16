@@ -206,13 +206,14 @@
         var tableHeadersRow = document.getElementById("table-headers");
         var tableBody = document.getElementById("table-body");
         var dataSet = [];
+        var actualItem = null;
 
         var gateway = `ws://192.168.4.1/ws`;
         var websocket;
         window.addEventListener('load', onLoad);
 
         function initWebSocket() {
-            //data = "group1.name1: value1\n" + "group1.name2: value2\n" + "group2.name1: value3\n" + "group2.name2: value4\n";
+            //data = "group1.name1: value1\n" + "group1.name2: value2\n" + "group2.n1: value3\n" + "group2.n2: value4\n";
             //processAllData(data);
             console.log('Trying to open a WebSocket connection...');
             websocket = new WebSocket(gateway);
@@ -224,6 +225,7 @@
         function onOpen(event) {
             console.log('Connection opened');
             // Request all parameters
+            dataSet = [];
             websocket.send("readall");
         }
 
@@ -237,12 +239,14 @@
             console.log(event.data);
             if(event.data == "Param written"){ //Param written confirmation
                 document.getElementById("popupContainer").style.display = "block";
-                document.getElementById("msg").textContent = "Correct!";
-            }
-            else if (event.data == "Rebooting..."){ //Rebooting confirmation
-                document.getElementById("popupContainer").style.display = "block";
-                document.getElementById("msg").textContent = "Rebooting...";
-            }
+                document.getElementById("msg").textContent = "Correct!"; 
+                dataSet.forEach(function(item) {
+                    if(item.name === actualItem.name && item.group === actualItem.group) {
+                        item.value = actualItem.value;
+                    }
+                });  
+                actualItem = null;           
+            }        
             else { //readall                  
                 processAllData(event.data);
             }  
@@ -301,14 +305,17 @@
         // Event handler for input key press (Enter)
         function handleInputKeyPress(event) {
             if (event.key === "Enter") {
-                document.getElementById("popupContainer").style.display = "block";
-                document.getElementById("msg").textContent = "Correct!";
                 var group = event.target.dataset.group;
                 var name = event.target.dataset.name;
                 var newValue = event.target.value;
                 console.log(group)
                 console.log(name)
-                //websocket.send("write -group "+ group +" -name "+ name +" -data " +  newValue);
+                websocket.send("write -group "+ group +" -name "+ name +" -data " +  newValue);
+                actualItem = {
+                    name: name,
+                    group: group,
+                    value: newValue
+                };
             }
         }
 
@@ -329,7 +336,7 @@
                 filteredData = dataSet;
             } else {
                 var filteredData = dataSet.filter(function(item) {
-                    return item.name.toLowerCase() === searchInput.toLowerCase();
+                    return item.name.toLowerCase().includes(searchInput.toLowerCase());
                 });
             }
 
